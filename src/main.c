@@ -3,7 +3,6 @@
 #include "FreeRTOSConfig.h"
 #include <projdefs.h>
 #include "portmacro.h"
-#include <partest.h>
 
 /* Scheduler includes. */
 #include "FreeRTOS.h"
@@ -21,6 +20,8 @@
 
 #include "music.h"
 #include "lcd_message.h"
+#include "FreeRTOS_IP.h"
+#include "FreeRTOS_Sockets.h"
 
 #define WEB_STACK_SIZE            ( configMINIMAL_STACK_SIZE * 3 )
 #define OLED_QUEUE_SIZE                    ( 3 )
@@ -86,15 +87,95 @@ void initPWM(){
     PWMGenEnable(PWM_BASE, PWM_GEN_0);
 }
 
+
+uint8_t ucMACAddress[ 6 ] = { 0x70,0x8A,0x91,0x61,0x45,0xBA };
+
+/* Define the network addressing.  These parameters will be used if either
+ipconfigUDE_DHCP is 0 or if ipconfigUSE_DHCP is 1 but DHCP auto configuration
+failed. */
+static const uint8_t ucIPAddress[ 4 ] = { 192, 168, 2, 231 };
+static const uint8_t ucNetMask[ 4 ] = { 255, 255, 255, 0 };
+static const uint8_t ucGatewayAddress[ 4 ] = { 192, 168, 2, 1 };
+
+static const uint8_t ucDNSServerAddress[ 4 ] = { 208, 67, 222, 222 };
+
+
+
+struct freertos_sockaddr xClient, xBindAddress;
+socklen_t xSize = sizeof( xClient );
+static const char* hello_str = "Hello: ";
+static uint8_t framebuffer[128*96*4/8];
+_Noreturn void vEchoTask(void *pvParameters){
+
+    vTaskDelay(1000);
+    Socket_t socket = FreeRTOS_socket(FREERTOS_AF_INET, FREERTOS_SOCK_STREAM, FREERTOS_IPPROTO_TCP);
+
+    static const TickType_t xReceiveTimeOut = portMAX_DELAY;
+
+    FreeRTOS_setsockopt( socket,
+                         0,
+                         FREERTOS_SO_RCVTIMEO,
+                         &xReceiveTimeOut,
+                         sizeof( xReceiveTimeOut ) );
+
+    xBindAddress.sin_port = FreeRTOS_htons(1337);
+    FreeRTOS_bind(socket, &xBindAddress, sizeof(xBindAddress));
+
+    FreeRTOS_listen(socket, 20);
+
+    Socket_t client = FreeRTOS_accept(socket, &xClient, &xSize);
+
+    FreeRTOS_setsockopt( client,
+                         0,
+                         FREERTOS_SO_RCVTIMEO,
+                         &xReceiveTimeOut,
+                         sizeof( xReceiveTimeOut ) );
+
+    FreeRTOS_setsockopt( client,
+                         0,
+                         FREERTOS_SO_SNDTIMEO,
+                         &xReceiveTimeOut,
+                         sizeof( xReceiveTimeOut ) );
+
+
+    FreeRTOS_send(client, (const void *) hello_str, sizeof(hello_str), 0);
+    xTaskNotifyGive(music_task_handle);
+    while(1){
+
+        size_t to_receive = sizeof(framebuffer);
+        size_t received = 0;
+
+        while (received != to_receive){
+            BaseType_t  recv_len = FreeRTOS_recv(client, framebuffer + received, to_receive - received, 0);
+            received += recv_len;
+            if(recv_len == -pdFREERTOS_ERRNO_ENOMEM){
+                GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_0, 1);
+            }
+        }
+
+
+        xOLEDMessage xOLEDMessage = {framebuffer};
+        xQueueSend(xOLEDQueue, &xOLEDMessage, 0);
+    }
+}
+
 int main(void) {
     prvSetupHardware();
     initPWM();
 
+    FreeRTOS_IPInit( ucIPAddress,
+                     ucNetMask,
+                     ucGatewayAddress,
+                     ucDNSServerAddress,
+                     ucMACAddress );
+
+
     xOLEDQueue = xQueueCreate(OLED_QUEUE_SIZE, sizeof(xOLEDMessage));
 
-    xTaskCreate(vuIP_Task, "uIP", WEB_STACK_SIZE, NULL, 2, NULL);
+//    xTaskCreate(vuIP_Task, "uIP", WEB_STACK_SIZE, NULL, 2, NULL);
     xTaskCreate(vMusicTask, "Music", WEB_STACK_SIZE, NULL, 1, &music_task_handle);
     xTaskCreate(vOLEDTask, "OLED", configMINIMAL_STACK_SIZE + 50, NULL, 3, NULL);
+    xTaskCreate(vEchoTask, "client", configMINIMAL_STACK_SIZE + 50, NULL, 3, NULL);
 
 
     /* Start the scheduler. */
@@ -125,7 +206,10 @@ void prvSetupHardware(void) {
     GPIODirModeSet(GPIO_PORTF_BASE, (GPIO_PIN_2 | GPIO_PIN_3), GPIO_DIR_MODE_HW);
     GPIOPadConfigSet(GPIO_PORTF_BASE, (GPIO_PIN_2 | GPIO_PIN_3), GPIO_STRENGTH_2MA, GPIO_PIN_TYPE_STD);
 
-    vParTestInitialise();
+    // led
+    GPIODirModeSet(GPIO_PORTF_BASE, GPIO_PIN_0, GPIO_DIR_MODE_OUT);
+    GPIOPadConfigSet(GPIO_PORTF_BASE, GPIO_PIN_0, GPIO_STRENGTH_2MA, GPIO_PIN_TYPE_STD);
+    GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_0, 0);
 }
 
 
@@ -134,7 +218,7 @@ _Noreturn void vOLEDTask(void *pvParameters) {
     xOLEDMessage xMessage;
 
     RIT128x96x4Init(SSI_FREQUENCY);
-    RIT128x96x4StringDraw("BadPlayer CMAKE", 0, 0, FONT_FULL_SCALE);
+    RIT128x96x4StringDraw("BadPlayer TCP", 0, 0, FONT_FULL_SCALE);
     RIT128x96x4StringDraw("by leadpogrommer", 0, CHARACTER_HEIGHT, FONT_FULL_SCALE);
     RIT128x96x4StringDraw("Awaiting connection", 0, 96 - CHARACTER_HEIGHT, FONT_FULL_SCALE);
 

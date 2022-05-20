@@ -48,11 +48,15 @@ else ()
 endif ()
 
 include_directories(
+        src
         third_party/FreeRtos/include
         third_party/FreeRtos/portable/GCC/ARM_CM3
         third_party/uip
-        src
         ${CMAKE_SOURCE_DIR}/third_party/LuminaryMicro
+        # here goes tcp
+        third_party/FreeRtos-Plus-TCP/portable/Compiler/GCC
+        third_party/FreeRtos-Plus-TCP/include
+
         #        ${CMAKE_SOURCE_DIR}/../Drivers/CMSIS/Include
 #        #[[ TODO rest of include folder locations ex.:
 #        ${CMAKE_SOURCE_DIR}/../Drivers/STM32H7xx_HAL_Driver/Inc
@@ -70,11 +74,29 @@ file(GLOB_RECURSE SOURCES
         third_party/FreeRtos/list.c
         third_party/FreeRtos/queue.c
         third_party/FreeRtos/tasks.c
-        third_party/uip/uip_arp.c
-        third_party/uip/psock.c
-        third_party/uip/timer.c
-        third_party/uip/uip.c
-        "src/*.c"
+        third_party/FreeRtos/event_groups.c
+#        third_party/uip/uip_arp.c
+#        third_party/uip/psock.c
+#        third_party/uip/timer.c
+#        third_party/uip/uip.c
+#        "src/*.c"
+        src/main.c
+        src/startup.c
+        src/rit128x96x4.c
+        src/ethernet.c
+
+        # here goes tcp
+        third_party/FreeRtos-Plus-TCP/portable/BufferManagement/BufferAllocation_2.c
+        third_party/FreeRtos-Plus-TCP/FreeRTOS_IP.c
+        third_party/FreeRtos-Plus-TCP/FreeRTOS_ARP.c
+        third_party/FreeRtos-Plus-TCP/FreeRTOS_DHCP.c
+        third_party/FreeRtos-Plus-TCP/FreeRTOS_DNS.c
+        third_party/FreeRtos-Plus-TCP/FreeRTOS_Sockets.c
+        third_party/FreeRtos-Plus-TCP/FreeRTOS_TCP_IP.c
+        third_party/FreeRtos-Plus-TCP/FreeRTOS_UDP_IP.c
+        third_party/FreeRtos-Plus-TCP/FreeRTOS_TCP_WIN.c
+        third_party/FreeRtos-Plus-TCP/FreeRTOS_Stream_Buffer.c
+
         )
 
 message(ERROR "sources: ${SOURCES}")
