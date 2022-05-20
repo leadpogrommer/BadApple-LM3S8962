@@ -134,7 +134,7 @@ _Noreturn void vOLEDTask(void *pvParameters) {
     xOLEDMessage xMessage;
 
     RIT128x96x4Init(SSI_FREQUENCY);
-    RIT128x96x4StringDraw("BadPlayer", 0, 0, FONT_FULL_SCALE);
+    RIT128x96x4StringDraw("BadPlayer CMAKE", 0, 0, FONT_FULL_SCALE);
     RIT128x96x4StringDraw("by leadpogrommer", 0, CHARACTER_HEIGHT, FONT_FULL_SCALE);
     RIT128x96x4StringDraw("Awaiting connection", 0, 96 - CHARACTER_HEIGHT, FONT_FULL_SCALE);
 

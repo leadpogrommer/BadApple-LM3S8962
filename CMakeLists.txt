@@ -21,7 +21,7 @@ set(CMAKE_C_STANDARD 11)
 
 set(MCPU cortex-m3)
 
-add_compile_definitions(GCC_ARMCM3_LM3S102)
+#add_compile_definitions(GCC_ARMCM3_LM3S102)
 add_compile_options(-mcpu=${MCPU} -mthumb)
 add_compile_options(-ffunction-sections -fdata-sections)
 
@@ -48,8 +48,8 @@ else ()
 endif ()
 
 include_directories(
-        third_party/FreeRTOS/Source/include
-        third_party/FreeRTOS/Source/portable/GCC/ARM_CM3
+        third_party/FreeRtos/include
+        third_party/FreeRtos/portable/GCC/ARM_CM3
         third_party/uip
         src
         ${CMAKE_SOURCE_DIR}/third_party/LuminaryMicro
@@ -65,11 +65,11 @@ include_directories(
 
 file(GLOB_RECURSE SOURCES
         "third_party/LuminaryMicro/*.c"
-        third_party/FreeRTOS/Source/portable/GCC/ARM_CM3/port.c
-        third_party/FreeRTOS/Source/portable/MemMang/heap_4.c
-        third_party/FreeRTOS/Source/list.c
-        third_party/FreeRTOS/Source/queue.c
-        third_party/FreeRTOS/Source/tasks.c
+        third_party/FreeRtos/portable/GCC/ARM_CM3/port.c
+        third_party/FreeRtos/portable/MemMang/heap_4.c
+        third_party/FreeRtos/list.c
+        third_party/FreeRtos/queue.c
+        third_party/FreeRtos/tasks.c
         third_party/uip/uip_arp.c
         third_party/uip/psock.c
         third_party/uip/timer.c
